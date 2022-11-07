@@ -1,4 +1,10 @@
-import Note
+import random
+from Note import Note
+from Score import hand
+from Score import density
+from Score import isSlide
+from Score import isSlides
+from Score import beat
 class Beat(Note):
     '''
     普通按键
