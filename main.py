@@ -16,7 +16,30 @@ for match in result:
 with open('TEMPCAR','w') as file:
     file.write(string)
 
+# 处理延音
+
+lst = []
+lists = string.split()
+for i in lists:
+    if '-' in i: #f2-4
+        cnt = 0
+        notes = i.split('-') # ['f2','4']
+        while cnt < len(notes):
+            if cnt == 0:
+                lst.append(notes[0])
+            else:
+                lst.append('r'+notes[cnt])
+            cnt = cnt + 1
+    else:
+        lst.append(i)
+
+with open('TIECAR','w') as file:
+    file.write(" ".join(lst))
+
 # 处理附点音符
+
+with open('TIECAR','r') as file:
+    string = file.read()
 
 lst = []
 lists = string.split()
@@ -38,6 +61,8 @@ for i in lists:
 
 with open('FLOATCAR','w') as file:
     file.write(" ".join(lst))
+
+
 print("预处理成功！")
 
 

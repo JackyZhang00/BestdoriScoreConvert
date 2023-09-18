@@ -33,7 +33,7 @@ with open('config.json',encoding='utf-8') as a:
 density=1 #【可修改】音符数量密度，0-1之间，数值越小则音符数量越少，难度越低
 
 def getParameter():
-    para = {"hand":hand,"isSlide":isSlide,"density":density,"mindistence":mindistence,"slideMinDistence":slideMinDistence,
+    para = {"hand":hand,"isSlide":isSlide,"isSlides":isSlides,"density":density,"mindistence":mindistence,"slideMinDistence":slideMinDistence,
             "slideStep":slideStep,"lineStep":lineStep,"isSlideStatic":isSlideStatic}
     # tup = (hand,isSlide,isSlides,density,mindistence,slideMinDistence,slideStep,lineStep,isSlideStatic)
     return para
@@ -46,8 +46,22 @@ def set_hand(newHand):
     if newHand in [-1,0,1]:
         hand = newHand
     else:
-        print("设置错误，程序将中止")
-        raise ValueError("设置错误")
+        raise ValueError("非-1/0/1！")
+    
+def set_isSlide(new):
+    global isSlide
+    if isinstance(new,bool):
+        isSlide = new
+    else:
+        raise ValueError("非布尔值！")
+    
+def set_isSlides(new):
+    global isSlides
+    if isinstance(new,bool):
+        isSlides = new
+    else:
+        raise ValueError("非布尔值！")
+
 class Score(object):
     def __init__(self):
         self.output = []
