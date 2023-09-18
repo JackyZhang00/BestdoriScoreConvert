@@ -35,6 +35,7 @@ density=1 #【可修改】音符数量密度，0-1之间，数值越小则音符
 class Score(object):
     def __init__(self):
         self.output = []
+        self.lane = []
         
     def getScore(self):
         #print('[',file=fw)
@@ -47,7 +48,21 @@ class Score(object):
         return ret
         
     def addNote(self,note):
-        self.output.append(note.add())
+        add = note.add()
+        if add != None:
+            self.output.append(add)
+
+    def setLane(self,lane):
+        '''
+        设置当前音符的位置
+        '''
+        self.lane = lane
+
+    def getLane(self):
+        '''
+        获取当前谱面最后一个音符的轨道位置
+        '''
+        return self.lane
 
 class Beat(Note):
     '''
@@ -68,6 +83,7 @@ class Beat(Note):
             else: #如果上一个不是长条
                 lane=random.randint(0,6)
             if visible<=density:
+                print("beat="+str(beat))
                 ret = '{"type":"Single","lane":'+str(lane)+',"beat":'+str(beat)+'}'
         beat=beat+4/(float(self.beat))
         isSlide=False
@@ -83,7 +99,7 @@ class BPM(Note):
         self.bpm = bpm
     def add(self):
         global beat
-        ret = '{"type":"BPM","bpm":'+str(self.bpm)+',"beat":'+str(beat)+'}'
+        ret = '{"beat":'+str(beat)+',"type":"BPM","bpm":'+str(self.bpm)+'}'
         return ret
 
 class Rest(Note):
@@ -93,6 +109,7 @@ class Rest(Note):
     def __init__(self,beat):
         self.beat = beat
     def add(self):
+        global beat
         beat=beat+4/(float(self.beat))
 
 class Flick(Note):
@@ -129,7 +146,7 @@ class SingleFlick(Note):
                     lane1=random.randint(0,6)
                     lane2=random.randint(0,6) #若两个键距离不够，重新生成
                 if visible<=density:
-                    ret = '{"type":"Single","lane":'+str(lane1)+',"beat":'+str(beat)+'}'
+                    ret = '{"type":"Single","lane":'+str(lane1)+',"beat":'+str(beat)+'},'
                     ret = ret + '{"type":"Single","lane":'+str(lane2)+',"beat":'+str(beat)+',"flick":true}'
             #如果上一个为长条形，则与普通划键一样
             if isSlide:
@@ -219,7 +236,147 @@ class LineSlide(Note):
             step=random.randint(-lineStep,lineStep)
             slane=slane+step
         if visible<=density:
-            ret = ret + '{"beat":'+str(beat+4/(float(self.beat)))+',"lane":'+str(slane)+'}]}'
+            ret = ret + ',{"beat":'+str(beat+4/(float(self.beat)))+',"lane":'+str(slane)+'}]}'
         beat=beat+4/(float(self.beat))
         isSlide=True #标记为长条
+        return ret
+class Slide(Note):
+    '''
+    单划动绿条
+    '''
+    def __init__(self,beats):
+        self.beats = beats
+    def add(self):
+        global beat,hand,slane
+        visible=random.random()
+        '''滑动长条，传入参数为音符列表'''
+        if hand==-1: #若没有限制使用手，则随意生成
+            slane=random.randint(0,6)
+            if slane>=0 and slane<3:
+                hand=0 #若长条在左侧（或中间），则使用左手(0)
+            elif slane>3 and slane<=6:
+                hand=1 #右手(1)
+            elif slane==3:
+                hand=random.randint(0,1)
+        elif hand==0: #若上一个长条为左手
+            slane=random.randint(min(slane+slideMinDistence,6),6) #该长条位置在右侧（右手）
+            hand=1
+        elif hand==1: #若上一个长条为右手
+            slane=random.randint(0,max(slane-slideMinDistence,0)) #该长条位置在左侧
+            hand=0
+        #输出长条
+        tempOut=[]
+        ret = '{"type":"Slide","connections":['
+        ret = ret + '{"beat":'+str(beat)+',"lane":'+str(slane)+'}'
+        for k in self.beats:
+            beat=beat+4/(int(k))
+            #判断是否在同一位置
+            if isSlideStatic:
+                step=random.randint(-slideStep,slideStep)
+            else:
+                step=random.randint(-slideStep,slideStep)
+                while step==0:
+                    step=random.randint(-slideStep,slideStep)
+                
+            slane=slane+step
+            #调整位置，避免出界
+            while slane>6 or slane<0:
+                slane=slane-step
+                if isSlideStatic:
+                    step=random.randint(-slideStep,slideStep)
+                else:
+                    step=random.randint(-slideStep,slideStep)
+                    while step==0:
+                        step=random.randint(-slideStep,slideStep)
+                slane=slane+step
+                #slane=5
+            #elif slane<0:
+                #slane=1
+                    
+            #if slane>=0 and slane<=3:
+                #hand=0
+            #elif slane>3 and slane<=6:
+                #hand=1
+            ret = ret + ',{"beat":'+str(beat)+',"lane":'+str(slane)+'}'
+        ret = ret + ']}'
+        if visible<=density:
+            ret = ret
+        else:
+            ret = ""
+        return ret
+    
+class DoubleSlide(Note):
+    def __init__(self,beats):
+        self.beats = beats
+    def add(self):
+        global beat,hand
+        visible=random.random()
+        tempOutL=[] #左侧
+        tempOutR=[] #右侧
+        slaneL=random.randint(0,3)
+        slaneR=random.randint(slaneL+slideMinDistence,6)
+            
+
+        tempOutL.append('{"type":"Slide","connections":[')
+        tempOutL.append('{"beat":'+str(beat)+',"lane":'+str(slaneL)+'}')
+        tempOutR.append(',{"type":"Slide","connections":[')
+        tempOutR.append('{"beat":'+str(beat)+',"lane":'+str(slaneR)+'}')
+        for k in self.beats:
+            beat=beat+4/(int(k))
+            #判断是否在同一位置
+            if isSlideStatic:
+                step=random.randint(-slideStep,slideStep)
+            else:
+                step=random.randint(-slideStep,slideStep)
+                while step==0:
+                    step=random.randint(-slideStep,slideStep)
+            slaneL=slaneL+step
+            while slaneL<0 or slaneL>=slaneR:
+                slaneL=slaneL-step
+                #判断是否在同一位置
+                if isSlideStatic:
+                    step=random.randint(-slideStep,slideStep)
+                else:
+                    step=random.randint(-slideStep,slideStep)
+                    while step==0:
+                        step=random.randint(-slideStep,slideStep)
+                slaneL=slaneL+step
+
+            #判断是否在同一位置
+            if isSlideStatic:
+                step=random.randint(-slideStep,slideStep)
+            else:
+                step=random.randint(-slideStep,slideStep)
+                while step==0:
+                    step=random.randint(-slideStep,slideStep)
+                        
+            slaneR=slaneR+step
+            while slaneR>6:
+                slaneR=slaneR-step
+                #判断是否在同一位置
+                if isSlideStatic:
+                    step=random.randint(-slideStep,slideStep)
+                else:
+                    step=random.randint(-slideStep,slideStep)
+                    while step==0:
+                        step=random.randint(-slideStep,slideStep)
+                slaneR=slaneR+step
+            while slaneR-slaneL<slideMinDistence and slaneR<6: #当右侧滑条与左侧滑条距离很近，且右侧不在边缘时
+                slaneR=slaneR-step
+                #判断是否在同一位置
+                if isSlideStatic:
+                    step=random.randint(-slideStep,slideStep)
+                else:
+                    step=random.randint(-slideStep,slideStep)
+                    while step==0:
+                        step=random.randint(-slideStep,slideStep)
+                slaneR=min(slaneR+step,6)
+            tempOutL.append(',{"beat":'+str(beat)+',"lane":'+str(slaneL)+'}')
+            tempOutR.append(',{"beat":'+str(beat)+',"lane":'+str(slaneR)+'}')
+
+        tempOutL.append(']}')
+        tempOutR.append(']}')
+        if visible<=density:
+            ret = "".join(tempOutL)
+            ret = ret + "".join(tempOutR)
         return ret
