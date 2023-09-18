@@ -16,23 +16,28 @@ for match in result:
 with open('TEMPCAR','w') as file:
     file.write(string)
 
-# # 处理附点音符
+# 处理附点音符
 
-# lst = []
-# lists = string.split()
-# for i in lists:
-#     if '.' in i:
-#         note = i[:-1]
-#         if i[0].isdigit: # 如果是普通音符
-#             lst.append(i[:-1])
-#             lst.append("r"+float(i[:-1])/2)
+lst = []
+lists = string.split()
+for i in lists:
+    if '.' in i:
+        note = i[:-1]
+        if i[0].isdigit(): # 如果是普通音符
+            lst.append(i[:-1])
+            lst.append("r"+str(float(i[:-1])*2))
+        else:
+            pattern = "([a-zA-Z]+)([*[0-9]+]*)"
+            result = re.match(pattern,i)
+            command = result.group(1)
+            beat = result.group(2)
+            lst.append(command+beat)
+            lst.append("r"+str(float(beat)*2))
+    else:
+        lst.append(i)
 
-#         pattern = "([a-zA-Z]+)([*[0-9]+]*)"
-#         result = re.match(pattern,i)
-#         command = result.group(1)
-#         beat = result.group(2)
-#         lst.append(command)
-
+with open('FLOATCAR','w') as file:
+    file.write(" ".join(lst))
 print("预处理成功！")
 
 
@@ -48,7 +53,7 @@ except FileNotFoundError:
 
 print("正在读取谱面文件")
 
-with open('TEMPCAR','r') as file:
+with open('FLOATCAR','r') as file:
     string = file.read()
     string = string.split()
 

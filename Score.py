@@ -32,6 +32,22 @@ with open('config.json',encoding='utf-8') as a:
 #以上内容已设置json文件-----------
 density=1 #【可修改】音符数量密度，0-1之间，数值越小则音符数量越少，难度越低
 
+def getParameter():
+    para = {"hand":hand,"isSlide":isSlide,"density":density,"mindistence":mindistence,"slideMinDistence":slideMinDistence,
+            "slideStep":slideStep,"lineStep":lineStep,"isSlideStatic":isSlideStatic}
+    # tup = (hand,isSlide,isSlides,density,mindistence,slideMinDistence,slideStep,lineStep,isSlideStatic)
+    return para
+
+def set_hand(newHand):
+    '''
+    设置手位置，其中-1表示不指定，0表示左手，1表示右手
+    '''
+    global hand
+    if newHand in [-1,0,1]:
+        hand = newHand
+    else:
+        print("设置错误，程序将中止")
+        raise ValueError("设置错误")
 class Score(object):
     def __init__(self):
         self.output = []
@@ -68,20 +84,27 @@ class Beat(Note):
     '''
     普通按键
     '''
-    def __init__(self,beat):
+    def __init__(self,beat,*lane):
         self.beat = beat
+        self.hasLane = False
+        if len(lane) != 0:
+            self.lane = lane
+            self.hasLane = True
     def add(self):
         global hand,density,isSlide,isSlides,beat
         visible=random.random()
         if not isSlides: #如果上一个不是双押长条
-            if isSlide: #如果上一个为长条
-                if hand==0: #长条为左手
-                    lane=random.randint(min(slane+slideMinDistence,6),6) #键的位置在右侧
-                elif hand==1:#长条为右手
-                    lane=random.randint(0,max(slane-slideMinDistence,0)) #键的位置在左侧
-                hand=-1 #恢复使用手的限制
-            else: #如果上一个不是长条
-                lane=random.randint(0,6)
+            if not self.hasLane:
+                if isSlide: #如果上一个为长条
+                    if hand==0: #长条为左手
+                        lane=random.randint(min(slane+slideMinDistence,6),6) #键的位置在右侧
+                    elif hand==1:#长条为右手
+                        lane=random.randint(0,max(slane-slideMinDistence,0)) #键的位置在左侧
+                    hand=-1 #恢复使用手的限制
+                else: #如果上一个不是长条
+                    lane=random.randint(0,6)
+            else:
+                lane = self.lane[0]
             if visible<=density:
                 print("beat="+str(beat))
                 ret = '{"type":"Single","lane":'+str(lane)+',"beat":'+str(beat)+'}'
@@ -89,7 +112,6 @@ class Beat(Note):
         isSlide=False
         isSlides=False
         return ret
-
 
 class BPM(Note):
     '''
@@ -116,11 +138,18 @@ class Flick(Note):
     '''
     单划键
     '''
-    def __init__(self,beat):
+    def __init__(self,beat,*lane):
         self.beat = beat
+        self.hasLane = False
+        if len(lane) != 0:
+            self.lane = lane
+            self.hasLane = True
     def add(self):
         global beat,density
-        lane=random.randint(0,6)
+        if self.hasLane:
+            lane = self.lane[0]
+        else:
+            lane=random.randint(0,6)
         visible=random.random()
         if visible<=density:
             ret = '{"type":"Single","lane":'+str(lane)+',"beat":'+str(beat)+',"flick":true}'
@@ -129,20 +158,28 @@ class Flick(Note):
     
 class SingleFlick(Note):
     '''
-    单键+划键
+    单键+划键, 若指定轨道参数，则第一个为蓝键轨道，第二个为粉键轨道
     '''
-    def __init__(self,beat):
+    def __init__(self,beat,*lane):
         self.beat = beat
+        self.hasLane = False
+        if len(lane) not in [0,1]:
+            self.lane = lane
+            self.hasLane = True
     def add(self):
         global hand,beat,isSlides,isSlide,mindistence,density,slideMinDistence #声明全局变量hand
-        lane1=random.randint(0,6) #第一个键
-        lane2=random.randint(0,6) #第二个键
+        if self.hasLane:
+            lane1 = self.lane[0]
+            lane2 = self.lane[1]
+        else:
+            lane1=random.randint(0,6) #第一个键
+            lane2=random.randint(0,6) #第二个键
         visible=random.random()
 
         if not isSlides: #判断上一个是否为双押长条，如果是则跳过
             #判断上一个是否为长条形
             if not isSlide:
-                while abs(lane2-lane1)<mindistence:
+                while abs(lane2-lane1)<mindistence and not self.hasLane:
                     lane1=random.randint(0,6)
                     lane2=random.randint(0,6) #若两个键距离不够，重新生成
                 if visible<=density:
@@ -150,10 +187,13 @@ class SingleFlick(Note):
                     ret = ret + '{"type":"Single","lane":'+str(lane2)+',"beat":'+str(beat)+',"flick":true}'
             #如果上一个为长条形，则与普通划键一样
             if isSlide:
-                if hand==0: #长条为左手
-                    lane=random.randint(min(slane+slideMinDistence,6),6) #键的位置在右侧
-                elif hand==1:#长条为右手
-                    lane=random.randint(0,max(slane-slideMinDistence,0)) #键的位置在左侧
+                if self.hasLane:
+                    lane = self.lane[0]
+                else:
+                    if hand==0: #长条为左手
+                        lane=random.randint(min(slane+slideMinDistence,6),6) #键的位置在右侧
+                    elif hand==1:#长条为右手
+                        lane=random.randint(0,max(slane-slideMinDistence,0)) #键的位置在左侧
                 hand=-1 #恢复使用手的限制
                 if visible<=density:
                     ret = '{"type":"Single","lane":'+str(lane)+',"beat":'+str(beat)+',"flick":true}'
@@ -166,8 +206,12 @@ class DSingle(Note):
     '''
     双押普通
     '''
-    def __init__(self,beat):
+    def __init__(self,beat,*lane):
         self.beat = beat
+        self.hasLane = False
+        if len(lane) not in [0,1]:
+            self.lane = lane
+            self.hasLane = True
     def add(self):
         global hand,beat,isSlide,isSlides,density,slideMinDistence,mindistence #声明全局变量hand
         visible=random.random()
@@ -175,9 +219,13 @@ class DSingle(Note):
 
             #判断上一个是否为长条形
             if not isSlide:
-                lane1=random.randint(0,6) #第一个键
-                lane2=random.randint(0,6) #第二个键
-                while abs(lane2-lane1)<mindistence:
+                if self.hasLane:
+                    lane1 = self.lane[0]
+                    lane2 = self.lane[1]
+                else:
+                    lane1=random.randint(0,6) #第一个键
+                    lane2=random.randint(0,6) #第二个键
+                while abs(lane2-lane1)<mindistence and not self.hasLane:
                     lane1=random.randint(0,6)
                     lane2=random.randint(0,6) #若两个键相同，重新生成
                 if visible<=density:
@@ -186,10 +234,13 @@ class DSingle(Note):
                     ret = ret + ',{"type":"Single","lane":'+str(lane2)+',"beat":'+str(beat)+'}'
             #如果上一个为长条形，则于普通键一样
             if isSlide:
-                if hand==0: #长条为左手
-                    lane=random.randint(min(slane+slideMinDistence,6),6) #键的位置在右侧
-                elif hand==1:#长条为右手
-                    lane=random.randint(0,max(slane-slideMinDistence,0)) #键的位置在左侧
+                if self.hasLane:
+                    lane = self.lane[0]
+                else:
+                    if hand==0: #长条为左手
+                        lane=random.randint(min(slane+slideMinDistence,6),6) #键的位置在右侧
+                    elif hand==1:#长条为右手
+                        lane=random.randint(0,max(slane-slideMinDistence,0)) #键的位置在左侧
                 hand=-1 #恢复使用手的限制
                 if visible<=density:
                     #输出结果
