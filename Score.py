@@ -271,6 +271,7 @@ class LineSlide(Note):
     '''
     def __init__(self,beat):
         self.beat = beat
+        self.range = []
     def add(self):
         global hand,slane,slideMinDistence,density,beat,lineStep,isSlide
         visible=random.random()
@@ -294,6 +295,7 @@ class LineSlide(Note):
         #输出长条
         if visible<=density:  
             ret = '{"type":"Slide","connections":[{"beat":'+str(beat)+',"lane":'+str(slane)+'}'
+            self.range.append(slane)
         step=random.randint(-lineStep,lineStep)
         slane=slane+step
         while slane>5 or slane<1:
@@ -302,15 +304,23 @@ class LineSlide(Note):
             slane=slane+step
         if visible<=density:
             ret = ret + ',{"beat":'+str(beat+4/(float(self.beat)))+',"lane":'+str(slane)+'}]}'
+            self.range.append(slane)
         beat=beat+4/(float(self.beat))
         isSlide=True #标记为长条
+        self.range.sort()
         return ret
+    def getLaneRange(self):
+        '''
+        返回绿条轨道范围，返回值为列表，第一项为左侧边界轨道，第二项为右侧边界轨道
+        '''
+        return self.range
 class Slide(Note):
     '''
     单划动绿条
     '''
     def __init__(self,beats):
         self.beats = beats
+        self.range = []
     def add(self):
         global beat,hand,slane
         visible=random.random()
@@ -333,6 +343,7 @@ class Slide(Note):
         tempOut=[]
         ret = '{"type":"Slide","connections":['
         ret = ret + '{"beat":'+str(beat)+',"lane":'+str(slane)+'}'
+        self.range.append(slane)
         for k in self.beats:
             beat=beat+4/(int(k))
             #判断是否在同一位置
@@ -363,11 +374,21 @@ class Slide(Note):
             #elif slane>3 and slane<=6:
                 #hand=1
             ret = ret + ',{"beat":'+str(beat)+',"lane":'+str(slane)+'}'
+            self.range.append(slane)
         ret = ret + ']}'
         if visible<=density:
             ret = ret
         else:
             ret = ""
+        self.range.sort()
+        return ret
+    def getLaneRange(self):
+        '''
+        返回绿条轨道范围，返回值为列表，第一项为左侧边界轨道，第二项为右侧边界轨道
+        '''
+        ret = []
+        ret.append(self.range[0])
+        ret.append(self.range[-1])
         return ret
     
 class DoubleSlide(Note):

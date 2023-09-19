@@ -113,6 +113,10 @@ for i in string:
         elif command == 'S':
             beats = eval(i[1:])
             s.addNote(DoubleSlide(beats))
+        # 添加自定义交互指令
+        # -------（请在下面编写程序）----------
+
+        # -------（请在上面编写程序）----------
     # print(s.getScore())
 
 # print(s.getScore)
